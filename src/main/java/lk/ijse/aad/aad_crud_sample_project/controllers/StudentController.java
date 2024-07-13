@@ -90,15 +90,17 @@ public class StudentController extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
         var dataProcess = new DataProcess();
-        try {
+        try (var writer = resp.getWriter()){
             String id = UtilProcess.generateId();
             Jsonb jsonb = JsonbBuilder.create();
             StudentDTO studentDTO = jsonb.fromJson(req.getReader(), StudentDTO.class);
             studentDTO.setId(id);
             boolean saved = dataProcess.saveStudent(studentDTO, connection);
             if (saved){
+                writer.write("Student Saved Successfully");
                 resp.setStatus(HttpServletResponse.SC_CREATED);
             }else {
+                writer.write("Student Not Saved");
                 resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         } catch (Exception e) {
@@ -145,8 +147,10 @@ public class StudentController extends HttpServlet {
             boolean deleted = dataProcess.deleteStudent(studentId, connection);
 
             if (deleted){
+                writer.write("Student Deleted Successfully");
                 resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             } else {
+                writer.write("Student Not Deleted");
                 resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         } catch (Exception e) {
@@ -168,6 +172,7 @@ public class StudentController extends HttpServlet {
             boolean updated = dataProcess.updateStudent(studentId, updatedStudent, connection);
 
             if (updated){
+                writer.write("Student Updated Successfully");
                 resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             } else {
                 writer.write("Update Failed");

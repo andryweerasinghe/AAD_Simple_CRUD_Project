@@ -14,6 +14,7 @@ import jakarta.json.JsonReader;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebInitParam;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,7 +28,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@WebServlet(urlPatterns = "/studentController")
+@WebServlet(urlPatterns = "/studentController"/*,
+        initParams = {  //we use this to get the connection only to this servlet
+            @WebInitParam(name = "driver-class",value = "com.mysql.cj.jdbc.Driver"),
+            @WebInitParam(name = "dbURL",value = "jdbc:mysql://localhost:3306/aad_crud?createDatabaseIfNotExist=true"),
+            @WebInitParam(name = "dbUserName",value = "root"),
+            @WebInitParam(name = "dbPassword",value = "Ijse@1234")
+        }*/
+)
 public class StudentController extends HttpServlet {
 
     Connection connection;
@@ -44,6 +52,11 @@ public class StudentController extends HttpServlet {
             var userName = getServletContext().getInitParameter("dbUserName");
             var password = getServletContext().getInitParameter("dbPassword");
 
+            //Get configs from servlet; this is used to get the connection only to this servlet. Also we dont have to use context parameters in the web.xml when using this method. But this method is not a best practice
+            /*var driver = getServletConfig().getInitParameter("driver-class");
+            var dbURL = getServletConfig().getInitParameter("dbURL");
+            var userName = getServletConfig().getInitParameter("dbUserName");
+            var password = getServletConfig().getInitParameter("dbPassword");*/
             Class.forName(driver);
             this.connection = DriverManager.getConnection(dbURL,userName,password);
         } catch (ClassNotFoundException | SQLException e) {

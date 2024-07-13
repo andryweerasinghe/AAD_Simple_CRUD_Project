@@ -20,6 +20,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lk.ijse.aad.aad_crud_sample_project.dto.StudentDTO;
+import lk.ijse.aad.aad_crud_sample_project.persistance.impl.DataProcess;
 import lk.ijse.aad.aad_crud_sample_project.util.UtilProcess;
 
 import java.io.IOException;
@@ -39,10 +40,6 @@ import java.util.UUID;
 public class StudentController extends HttpServlet {
 
     Connection connection;
-    static String SAVE_STUDENT = "INSERT INTO student (id, name, email, city, level) VALUES(?,?,?,?,?)";
-    static String GET_STUDENT = "SELECT * FROM student WHERE id = ?";
-    static String DELETE_STUDENT = "DELETE FROM student WHERE id = ?";
-    static String UPDATE_STUDENT = "UPDATE student SET name = ?, email = ?, city = ?, level = ? WHERE id = ?";
 
     @Override
     public void init() throws ServletException {
@@ -67,28 +64,20 @@ public class StudentController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         //Todo: Get Student details
-        var studentDTO = new StudentDTO();
         var studentId = req.getParameter("id");
+        var dataProcess = new DataProcess();
+
         try (var writer = resp.getWriter()){  //The try-with-resources statement ensures that the PrintWriter is automatically closed at the end of the statement. This avoids resource leaks, which can occur if the resource is not properly closed.
-            var ps = connection.prepareStatement(GET_STUDENT);
-            ps.setString(1, studentId);
-            var resultSet = ps.executeQuery();
-            while (resultSet.next()) {
-                studentDTO.setId(resultSet.getString(1));
-                studentDTO.setName(resultSet.getString(2));
-                studentDTO.setEmail(resultSet.getString(3));
-                studentDTO.setCity(resultSet.getString(4));
-                studentDTO.setLevel(resultSet.getString(5));
-            }
-            System.out.println(studentDTO);
+            var student = dataProcess.getStudent(studentId, this.connection);
+            System.out.println(student);
 
             //following is the way of writing the data by using json
             resp.setContentType("application/json");  //this is used to inform the client that this is a json type
             var jsonb = JsonbBuilder.create();
-            jsonb.toJson(studentDTO, writer);
+            jsonb.toJson(student, writer);
 
 //            writer.write(studentDTO.toString());  //
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -100,29 +89,22 @@ public class StudentController extends HttpServlet {
             //send error
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
-        String id = UtilProcess.generateId();
-        Jsonb jsonb = JsonbBuilder.create();
-        StudentDTO studentDTO = jsonb.fromJson(req.getReader(), StudentDTO.class);
-        studentDTO.setId(id);
-        System.out.println(studentDTO);
-
-        //Persist Data
-        try (var writer = resp.getWriter()){
-            var ps = connection.prepareStatement(SAVE_STUDENT);
-            ps.setString(1, studentDTO.getId());
-            ps.setString(2, studentDTO.getName());
-            ps.setString(3, studentDTO.getEmail());
-            ps.setString(4, studentDTO.getCity());
-            ps.setString(5, studentDTO.getLevel());
-            if(ps.executeUpdate() != 0 ){
-                writer.write("Student Saved");
-                resp.setStatus(HttpServletResponse.SC_CREATED);  //this will confirm that the req is succeeded and a new resource is created as a result ('201 created' status code)
+        var dataProcess = new DataProcess();
+        try {
+            String id = UtilProcess.generateId();
+            Jsonb jsonb = JsonbBuilder.create();
+            StudentDTO studentDTO = jsonb.fromJson(req.getReader(), StudentDTO.class);
+            studentDTO.setId(id);
+            boolean saved = dataProcess.saveStudent(studentDTO, connection);
+            if (saved){
+                resp.setStatus(HttpServletResponse.SC_CREATED);
             }else {
-                writer.write("Student not Saved");
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
         /*List<StudentDTO> studentDTOList = jsonb.fromJson(req.getReader(), new ArrayList<StudentDTO>(){}
                 .getClass().getGenericSuperclass());
         studentDTOList.forEach(System.out::println);*/
@@ -158,17 +140,16 @@ public class StudentController extends HttpServlet {
             resp.getWriter().write("Student ID is required");
             return;
         }
+        var dataProcess = new DataProcess();
         try (var writer = resp.getWriter()){
-            var ps = this.connection.prepareStatement(DELETE_STUDENT);
-            ps.setString(1, studentId);
-            int rowsAffected = ps.executeUpdate();
+            boolean deleted = dataProcess.deleteStudent(studentId, connection);
 
-            if (rowsAffected != 0){
+            if (deleted){
                 resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             } else {
                 resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -179,25 +160,20 @@ public class StudentController extends HttpServlet {
             //send error
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
+        var dataProcess = new DataProcess();
         try(var writer = resp.getWriter()){
-            var ps = connection.prepareStatement(UPDATE_STUDENT);
             var studentId = req.getParameter("id");
             Jsonb jsonb = JsonbBuilder.create();
             var updatedStudent = jsonb.fromJson(req.getReader(), StudentDTO.class);
-            ps.setString(1, updatedStudent.getName());
-            ps.setString(2, updatedStudent.getEmail());
-            ps.setString(3, updatedStudent.getCity());
-            ps.setString(4, updatedStudent.getLevel());
-            ps.setString(5, studentId);
+            boolean updated = dataProcess.updateStudent(studentId, updatedStudent, connection);
 
-            var rowsAffected = ps.executeUpdate();
-            if (rowsAffected != 0){
+            if (updated){
                 resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             } else {
                 writer.write("Update Failed");
                 resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

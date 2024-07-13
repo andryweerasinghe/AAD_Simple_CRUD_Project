@@ -19,6 +19,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lk.ijse.aad.aad_crud_sample_project.dto.StudentDTO;
+import lk.ijse.aad.aad_crud_sample_project.util.UtilProcess;
 
 import java.io.IOException;
 import java.sql.*;
@@ -37,11 +38,12 @@ public class StudentController extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        var driver = getServletContext().getInitParameter("driver-class");
-        var dbURL = getServletContext().getInitParameter("dbURL");
-        var userName = getServletContext().getInitParameter("dbUserName");
-        var password = getServletContext().getInitParameter("dbPassword");
         try {
+            var driver = getServletContext().getInitParameter("driver-class");
+            var dbURL = getServletContext().getInitParameter("dbURL");
+            var userName = getServletContext().getInitParameter("dbUserName");
+            var password = getServletContext().getInitParameter("dbPassword");
+
             Class.forName(driver);
             this.connection = DriverManager.getConnection(dbURL,userName,password);
         } catch (ClassNotFoundException | SQLException e) {
@@ -70,7 +72,7 @@ public class StudentController extends HttpServlet {
             //following is the way of writing the data by using json
             resp.setContentType("application/json");  //this is used to inform the client that this is a json type
             var jsonb = JsonbBuilder.create();
-            jsonb.toJson(studentDTO, resp.getWriter());
+            jsonb.toJson(studentDTO, writer);
 
 //            writer.write(studentDTO.toString());  //
         } catch (SQLException e) {
@@ -85,14 +87,14 @@ public class StudentController extends HttpServlet {
             //send error
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
-        String id = UUID.randomUUID().toString();
+        String id = UtilProcess.generateId();
         Jsonb jsonb = JsonbBuilder.create();
         StudentDTO studentDTO = jsonb.fromJson(req.getReader(), StudentDTO.class);
         studentDTO.setId(id);
         System.out.println(studentDTO);
 
         //Persist Data
-        try {
+        try (var writer = resp.getWriter()){
             var ps = connection.prepareStatement(SAVE_STUDENT);
             ps.setString(1, studentDTO.getId());
             ps.setString(2, studentDTO.getName());
@@ -100,9 +102,10 @@ public class StudentController extends HttpServlet {
             ps.setString(4, studentDTO.getCity());
             ps.setString(5, studentDTO.getLevel());
             if(ps.executeUpdate() != 0 ){
-                resp.getWriter().write("Student Saved");
+                writer.write("Student Saved");
+                resp.setStatus(HttpServletResponse.SC_CREATED);  //this will confirm that the req is succeeded and a new resource is created as a result ('201 created' status code)
             }else {
-                resp.getWriter().write("Student not Saved");
+                writer.write("Student not Saved");
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -136,7 +139,6 @@ public class StudentController extends HttpServlet {
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         //Todo: Delete a student
-        var studentDTO = new StudentDTO();
         var studentId = req.getParameter("id");
         if (studentId == null || studentId.isEmpty()) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -144,46 +146,43 @@ public class StudentController extends HttpServlet {
             return;
         }
         try (var writer = resp.getWriter()){
-            var ps = connection.prepareStatement(DELETE_STUDENT);
+            var ps = this.connection.prepareStatement(DELETE_STUDENT);
             ps.setString(1, studentId);
             int rowsAffected = ps.executeUpdate();
-            System.out.println(studentDTO);
 
             if (rowsAffected != 0){
-                resp.getWriter().write("Student Deleted");
+                resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             } else {
-                resp.getWriter().write("Delete Failed");
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doPatch(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         //Todo: Update a student
         if (!req.getContentType().toLowerCase().startsWith("application/json") || req.getContentType() == null) {
             //send error
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
-
-        Jsonb jsonb = JsonbBuilder.create();
-        StudentDTO studentDTO = jsonb.fromJson(req.getReader(), StudentDTO.class);
-        System.out.println(studentDTO);
-
         try(var writer = resp.getWriter()){
             var ps = connection.prepareStatement(UPDATE_STUDENT);
-            ps.setString(1, studentDTO.getName());
-            ps.setString(2, studentDTO.getEmail());
-            ps.setString(3, studentDTO.getCity());
-            ps.setString(4, studentDTO.getLevel());
-            ps.setString(5, studentDTO.getId());
+            var studentId = req.getParameter("id");
+            Jsonb jsonb = JsonbBuilder.create();
+            var updatedStudent = jsonb.fromJson(req.getReader(), StudentDTO.class);
+            ps.setString(1, updatedStudent.getName());
+            ps.setString(2, updatedStudent.getEmail());
+            ps.setString(3, updatedStudent.getCity());
+            ps.setString(4, updatedStudent.getLevel());
+            ps.setString(5, studentId);
 
             var rowsAffected = ps.executeUpdate();
             if (rowsAffected != 0){
-                resp.getWriter().write("Student Updated");
+                resp.setStatus(HttpServletResponse.SC_NO_CONTENT);
             } else {
-                resp.getWriter().write("Update Failed");
+                writer.write("Update Failed");
+                resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);

@@ -4,7 +4,7 @@ import lk.ijse.aad.aad_crud_sample_project.dto.StudentDTO;
 
 import java.sql.Connection;
 
-public interface Data {
+public sealed interface StudentData permits StudentDataProcess {
     StudentDTO getStudent(String id, Connection connection) throws Exception;
     boolean saveStudent(StudentDTO studentDTO, Connection connection) throws Exception;
     boolean deleteStudent(String id, Connection connection) throws Exception;

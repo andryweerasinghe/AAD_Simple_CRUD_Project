@@ -5,15 +5,14 @@
 
  */
 
-package lk.ijse.aad.aad_crud_sample_project.persistance.impl;
+package lk.ijse.aad.aad_crud_sample_project.persistance;
 
 import lk.ijse.aad.aad_crud_sample_project.dto.StudentDTO;
-import lk.ijse.aad.aad_crud_sample_project.persistance.Data;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 
-public class DataProcess implements Data {
+public final class StudentDataProcess implements StudentData {
 
     static String SAVE_STUDENT = "INSERT INTO student (id, name, email, city, level) VALUES(?,?,?,?,?)";
     static String GET_STUDENT = "SELECT * FROM student WHERE id = ?";

@@ -7,27 +7,19 @@
 
 package lk.ijse.aad.aad_crud_sample_project.controllers;
 
-import jakarta.json.Json;
-import jakarta.json.JsonArray;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonReader;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebInitParam;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lk.ijse.aad.aad_crud_sample_project.dto.StudentDTO;
-import lk.ijse.aad.aad_crud_sample_project.persistance.impl.DataProcess;
+import lk.ijse.aad.aad_crud_sample_project.persistance.StudentDataProcess;
 import lk.ijse.aad.aad_crud_sample_project.util.UtilProcess;
 
 import java.io.IOException;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @WebServlet(urlPatterns = "/studentController"/*,
         initParams = {  //we use this to get the connection only to this servlet
@@ -65,7 +57,7 @@ public class StudentController extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         //Todo: Get Student details
         var studentId = req.getParameter("id");
-        var dataProcess = new DataProcess();
+        var dataProcess = new StudentDataProcess();
 
         try (var writer = resp.getWriter()){  //The try-with-resources statement ensures that the PrintWriter is automatically closed at the end of the statement. This avoids resource leaks, which can occur if the resource is not properly closed.
             var student = dataProcess.getStudent(studentId, this.connection);
@@ -89,7 +81,7 @@ public class StudentController extends HttpServlet {
             //send error
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
-        var dataProcess = new DataProcess();
+        var dataProcess = new StudentDataProcess();
         try (var writer = resp.getWriter()){
             String id = UtilProcess.generateId();
             Jsonb jsonb = JsonbBuilder.create();
@@ -142,7 +134,7 @@ public class StudentController extends HttpServlet {
             resp.getWriter().write("Student ID is required");
             return;
         }
-        var dataProcess = new DataProcess();
+        var dataProcess = new StudentDataProcess();
         try (var writer = resp.getWriter()){
             boolean deleted = dataProcess.deleteStudent(studentId, connection);
 
@@ -164,7 +156,7 @@ public class StudentController extends HttpServlet {
             //send error
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
-        var dataProcess = new DataProcess();
+        var dataProcess = new StudentDataProcess();
         try(var writer = resp.getWriter()){
             var studentId = req.getParameter("id");
             Jsonb jsonb = JsonbBuilder.create();

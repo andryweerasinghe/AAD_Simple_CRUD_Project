@@ -40,5 +40,9 @@
         <param-name>vl2</param-name>
         <param-value>16</param-value>
     </context-param>
+    <context-param>
+        <param-name>origin</param-name>
+        <param-value>http://localhost:63342</param-value>
+    </context-param>
 
 </web-app>

@@ -17,7 +17,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import lk.ijse.aad.aad_crud_sample_project.dto.StudentDTO;
 import lk.ijse.aad.aad_crud_sample_project.persistance.StudentDataProcess;
 import lk.ijse.aad.aad_crud_sample_project.util.UtilProcess;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.sql.*;
 
@@ -28,27 +33,33 @@ import java.sql.*;
             @WebInitParam(name = "dbUserName",value = "root"),
             @WebInitParam(name = "dbPassword",value = "Ijse@1234")
         }*/
-)
+,loadOnStartup = 2)
 public class StudentController extends HttpServlet {
+    static Logger logger = LoggerFactory.getLogger(StudentController.class);
 
     Connection connection;
 
     @Override
     public void init() throws ServletException {
+        logger.info("Initializing StudentController with call init method");
         try {
-            var driver = getServletContext().getInitParameter("driver-class");
-            var dbURL = getServletContext().getInitParameter("dbURL");
-            var userName = getServletContext().getInitParameter("dbUserName");
-            var password = getServletContext().getInitParameter("dbPassword");
+            var ctx = new InitialContext();
+            DataSource pool = (DataSource) ctx.lookup("java:comp/env/jdbc/studentRegistration");
+
+
+//            var driver = getServletContext().getInitParameter("driver-class");
+//            var dbURL = getServletContext().getInitParameter("dbURL");
+//            var userName = getServletContext().getInitParameter("dbUserName");
+//            var password = getServletContext().getInitParameter("dbPassword");
 
             //Get configs from servlet; this is used to get the connection only to this servlet. Also we dont have to use context parameters in the web.xml when using this method. But this method is not a best practice
             /*var driver = getServletConfig().getInitParameter("driver-class");
             var dbURL = getServletConfig().getInitParameter("dbURL");
             var userName = getServletConfig().getInitParameter("dbUserName");
             var password = getServletConfig().getInitParameter("dbPassword");*/
-            Class.forName(driver);
-            this.connection = DriverManager.getConnection(dbURL,userName,password);
-        } catch (ClassNotFoundException | SQLException e) {
+//            Class.forName(driver);
+            this.connection = pool.getConnection();
+        } catch (SQLException | NamingException e) {
             e.printStackTrace();
         }
     }
